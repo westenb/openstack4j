@@ -125,21 +125,17 @@ public final class HttpCommand<R> {
      * @return incremement's the retry count and returns self
      */
     public HttpCommand<R> incrementRetriesAndReturn() {
-    	initialize();
-    	
-    	// Issue #676: ensure that input stream is read again from start
-    	if (hasEntity()) {
-    	    if (isInputStreamEntity()) {             
-    	        try {
-    	            ((InputStream) entity.getEntity()).reset();
-    	        } catch (IOException e) {
-    	            throw new ConnectionException("Reset of input stream not possible. Aborting operation.", 0, e);
-    	        }
-    	    }
-    	}
-    		
-    	retries++;
-    	return this;
+        initialize();
+        
+        // Issue #676: ensure that entity is restored to inital form (e.g. InputStream is reset)
+        try {
+            if ( hasEntity() ) resetEntity();
+        } catch (IOException e) {
+            throw new ConnectionException("Entity cannot be reset. Retry not idem-potent; aborting.", 0, e);
+        }
+            
+        retries++;
+        return this;
     }
 
     public HttpRequest<R> getRequest() {
@@ -164,6 +160,14 @@ public final class HttpCommand<R> {
 
         for(Map.Entry<String, Object> h : request.getHeaders().entrySet()) {
             invocation.header(h.getKey(), h.getValue());
+        }
+    }
+    
+    private void resetEntity() throws IOException {
+        if (isInputStreamEntity()) {             
+           ((InputStream) entity.getEntity()).reset();
+        } else {
+            // something to do for other payload types?
         }
     }
 }
