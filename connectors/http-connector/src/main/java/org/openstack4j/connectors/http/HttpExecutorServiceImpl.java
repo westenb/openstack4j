@@ -58,7 +58,10 @@ public class HttpExecutorServiceImpl implements HttpExecutorService {
     private <R> HttpResponse invokeRequest(HttpCommand<R> command) throws Exception {
         HttpResponse response = command.execute();
 
-        if (command.getRetries() == 0 && response.getStatus() == 401 && !command.getRequest().getHeaders().containsKey(ClientConstants.HEADER_OS4J_AUTH)) {
+        if (command.getRetries() == 0 
+            && response.getStatus() == 401 
+            && !command.hasEntity() // Issue 656
+            && !command.getRequest().getHeaders().containsKey(ClientConstants.HEADER_OS4J_AUTH)) {
             try
             {
                 OSAuthenticator.reAuthenticate();

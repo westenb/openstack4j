@@ -2,8 +2,6 @@ package org.openstack4j.connectors.http;
 
 import com.google.common.io.ByteStreams;
 import com.google.common.net.MediaType;
-
-import org.openstack4j.api.exceptions.ConnectionException;
 import org.openstack4j.core.transport.Config;
 import org.openstack4j.core.transport.HttpRequest;
 import org.openstack4j.core.transport.HttpResponse;
@@ -169,16 +167,6 @@ public final class HttpCommand<R> {
      */
     public HttpCommand<R> incrementRetriesAndReturn() {
         initialize();
-        
-        // Issue #676: ensure that entity is restored to inital form (e.g. InputStream is reset)
-        try {
-            if ( hasEntity() ) resetEntity();
-        } catch (IOException e) {
-            // This happens for URL and File Payloads; without access to the original objects, the streams
-            // cannot be reconstructed at this point.
-            throw new ConnectionException("Entity cannot be reset. Retry not idem-potent; aborting.", 0, e);
-        }
-        
         retries++;
         return this;
     }
@@ -237,17 +225,5 @@ public final class HttpCommand<R> {
             connection.setRequestProperty(h.getKey(), String.valueOf(h.getValue()));
         }
 
-    }
-    
-    private boolean isInputStreamEntity() {
-      return (hasEntity() && InputStream.class.isAssignableFrom(request.getEntity().getClass()));
-    }
-    
-    private void resetEntity() throws IOException {
-      if (isInputStreamEntity()) {             
-         ((InputStream) request.getEntity()).reset();
-      } else {
-         // nothing to do
-      }
     }
 }

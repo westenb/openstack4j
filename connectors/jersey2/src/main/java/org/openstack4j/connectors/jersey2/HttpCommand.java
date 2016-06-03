@@ -1,6 +1,5 @@
 package org.openstack4j.connectors.jersey2;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
 import java.util.Map;
@@ -14,10 +13,9 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import org.glassfish.jersey.client.ClientProperties;
-import org.glassfish.jersey.client.HttpUrlConnectorProvider;
 import org.glassfish.jersey.client.RequestEntityProcessing;
+import org.glassfish.jersey.client.HttpUrlConnectorProvider;
 import org.glassfish.jersey.filter.LoggingFilter;
-import org.openstack4j.api.exceptions.ConnectionException;
 import org.openstack4j.core.transport.ClientConstants;
 import org.openstack4j.core.transport.HttpRequest;
 import org.openstack4j.core.transport.internal.HttpLoggingFilter;
@@ -126,16 +124,6 @@ public final class HttpCommand<R> {
      */
     public HttpCommand<R> incrementRetriesAndReturn() {
         initialize();
-        
-        // Issue #676: ensure that entity is restored to inital form
-        try {
-            if ( hasEntity() ) resetEntity();
-        } catch (IOException e) {
-            // This happens for URL and File Payloads; without access to the original objects, the streams
-            // cannot be reconstructed at this point.
-            throw new ConnectionException("Entity cannot be reset. Retry not idem-potent; aborting.", 0, e);
-        }
-            
         retries++;
         return this;
     }
@@ -162,14 +150,6 @@ public final class HttpCommand<R> {
 
         for(Map.Entry<String, Object> h : request.getHeaders().entrySet()) {
             invocation.header(h.getKey(), h.getValue());
-        }
-    }
-    
-    private void resetEntity() throws IOException {
-        if (isInputStreamEntity()) {             
-           ((InputStream) entity.getEntity()).reset();
-        } else {
-            // nothing to do
         }
     }
 }
