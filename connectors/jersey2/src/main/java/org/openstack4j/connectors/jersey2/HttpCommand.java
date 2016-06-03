@@ -127,10 +127,12 @@ public final class HttpCommand<R> {
     public HttpCommand<R> incrementRetriesAndReturn() {
         initialize();
         
-        // Issue #676: ensure that entity is restored to inital form (e.g. InputStream is reset)
+        // Issue #676: ensure that entity is restored to inital form
         try {
             if ( hasEntity() ) resetEntity();
         } catch (IOException e) {
+            // This happens for URL and File Payloads; without access to the original objects, the streams
+            // cannot be reconstructed at this point.
             throw new ConnectionException("Entity cannot be reset. Retry not idem-potent; aborting.", 0, e);
         }
             
@@ -167,7 +169,7 @@ public final class HttpCommand<R> {
         if (isInputStreamEntity()) {             
            ((InputStream) entity.getEntity()).reset();
         } else {
-            // something to do for other payload types?
+            // nothing to do
         }
     }
 }

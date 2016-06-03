@@ -1,5 +1,7 @@
 package org.openstack4j.connectors.resteasy;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.List;
 import java.util.Map;
 
@@ -7,6 +9,7 @@ import javax.ws.rs.core.UriBuilder;
 
 import org.jboss.resteasy.client.ClientRequest;
 import org.jboss.resteasy.client.ClientResponse;
+import org.openstack4j.api.exceptions.ConnectionException;
 import org.openstack4j.connectors.resteasy.executors.ApacheHttpClientExecutor;
 import org.openstack4j.core.transport.ClientConstants;
 import org.openstack4j.core.transport.HttpRequest;
@@ -85,6 +88,16 @@ public final class HttpCommand<R> {
      */
     public HttpCommand<R> incrementRetriesAndReturn() {
     	initialize();
+    	
+      // Issue #676: ensure that entity is restored to inital form (e.g. InputStream is reset)
+      try {
+          if ( hasEntity() ) resetEntity();
+      } catch (IOException e) {
+          // This happens for URL and File Payloads; without access to the original objects, the streams
+          // cannot be reconstructed at this point.
+          throw new ConnectionException("Entity cannot be reset. Retry not idem-potent; aborting.", 0, e);
+      }
+    	
     	retries++;
     	return this;
     }
@@ -111,5 +124,17 @@ public final class HttpCommand<R> {
         for(Map.Entry<String, Object> h : request.getHeaders().entrySet()) {
             client.header(h.getKey(), h.getValue());
         }
+    }
+    
+    private boolean isInputStreamEntity() {
+      return (hasEntity() && InputStream.class.isAssignableFrom(request.getEntity().getClass()));
+    }
+    
+    private void resetEntity() throws IOException {
+      if (isInputStreamEntity()) {             
+         ((InputStream) request.getEntity()).reset();
+      } else {
+          // nothing to do
+      }
     }
 }
